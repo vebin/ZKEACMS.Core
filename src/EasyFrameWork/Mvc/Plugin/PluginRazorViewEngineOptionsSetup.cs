@@ -1,4 +1,4 @@
-﻿/* http://www.zkea.net/ 
+/* http://www.zkea.net/ 
  * Copyright 2017 ZKEASOFT 
  * http://www.zkea.net/licenses */
 
@@ -25,11 +25,11 @@ namespace Easy.Mvc.Plugin
             {
                 options.FileProviders.Add(new DeveloperViewFileProvider(hostingEnvironment));
             }
-            loader.GetPluginAssemblies().Each(assembly =>
-            {
-                var reference = MetadataReference.CreateFromFile(assembly.Location);
-                options.AdditionalCompilationReferences.Add(reference);                
-            });
+            //loader.GetPluginAssemblies().Each(assembly =>
+            //{
+            //    var reference = MetadataReference.CreateFromFile(assembly.Location);
+            //    options.AdditionalCompilationReferences.Add(reference);                
+            //});
             //options.CompilationCallback = context =>
             //{
             //    var reference = MetadataReference.CreateFromFile(@"D:\Projects\ZKEACMS.Core\src\TestAss\bin\Debug\netstandard1.6\TestAss.dll");
@@ -41,9 +41,9 @@ namespace Easy.Mvc.Plugin
                 var directory = new DirectoryInfo(m.RelativePath);
                 if (hostingEnvironment.IsDevelopment())
                 {
-                    options.ViewLocationFormats.Add($"/Porject.RootPath/{directory.Name}" + "/Views/{1}/{0}" + RazorViewEngine.ViewExtension);
-                    options.ViewLocationFormats.Add($"/Porject.RootPath/{directory.Name}" + "/Views/Shared/{0}" + RazorViewEngine.ViewExtension);
-                    options.ViewLocationFormats.Add($"/Porject.RootPath/{directory.Name}" + "/Views/{0}" + RazorViewEngine.ViewExtension);
+                    options.ViewLocationFormats.Add($"{DeveloperViewFileProvider.ProjectRootPath}{directory.Name}" + "/Views/{1}/{0}" + RazorViewEngine.ViewExtension);
+                    options.ViewLocationFormats.Add($"{DeveloperViewFileProvider.ProjectRootPath}{directory.Name}" + "/Views/Shared/{0}" + RazorViewEngine.ViewExtension);
+                    options.ViewLocationFormats.Add($"{DeveloperViewFileProvider.ProjectRootPath}{directory.Name}" + "/Views/{0}" + RazorViewEngine.ViewExtension);
                 }
                 else
                 {

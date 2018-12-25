@@ -14,41 +14,40 @@ namespace ZKEACMS.Common.Service
         public CarouselItemService(IApplicationContext applicationContext, CMSDbContext dbContext) : base(applicationContext, dbContext)
         {
         }
+        public override DbSet<CarouselItemEntity> CurrentDbSet => (DbContext as CMSDbContext).CarouselItem;
 
-        public override DbSet<CarouselItemEntity> CurrentDbSet
-        {
-            get
-            {
-                return (DbContext as CMSDbContext).CarouselItem;
-            }
-        }
-
-        public override void Add(CarouselItemEntity item)
+        public override ServiceResult<CarouselItemEntity> Add(CarouselItemEntity item)
         {
             if (item.ActionType != ActionType.Unattached)
             {
-                base.Add(item);
+                return base.Add(item);
             }
+            return new ServiceResult<CarouselItemEntity>();
         }
-        public override void Update(CarouselItemEntity item, bool saveImmediately = true)
+        public override ServiceResult<CarouselItemEntity> Update(CarouselItemEntity item)
         {
             if (item.ActionType == ActionType.Update)
             {
-                base.Update(item, saveImmediately);
+                return base.Update(item);
             }
             else if (item.ActionType == ActionType.Create)
             {
-                base.Add(item);
+                return base.Add(item);
             }
             else if (item.ActionType == ActionType.Delete)
             {
-                Remove(item, saveImmediately);
+                if (item.ID > 0)
+                {
+                    Remove(item);
+                }                
             }
+            return new ServiceResult<CarouselItemEntity>();
         }
 
-        public override void UpdateRange(params CarouselItemEntity[] items)
+        public override ServiceResult<CarouselItemEntity> UpdateRange(params CarouselItemEntity[] items)
         {
             items.Each(m => Update(m));
+            return new ServiceResult<CarouselItemEntity>();
         }
     }
 }

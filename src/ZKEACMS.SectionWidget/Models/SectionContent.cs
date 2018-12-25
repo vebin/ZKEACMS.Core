@@ -4,6 +4,7 @@ using Easy.MetaData;
 using Easy.Models;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using Easy.RepositoryPattern;
 
 namespace ZKEACMS.SectionWidget.Models
 {
@@ -31,7 +32,7 @@ namespace ZKEACMS.SectionWidget.Models
             set;
         }
     }
-    
+
     public class SectionContent : SectionContentBase
     {
         public override int SectionContentType
@@ -77,6 +78,25 @@ namespace ZKEACMS.SectionWidget.Models
                 Description = Description
             };
         }
+        public SectionContentBasePart CopyTo(SectionContentBasePart sectionContentBasePart)
+        {
+            sectionContentBasePart.ActionType = ActionType;
+            sectionContentBasePart.ID = ID;
+            sectionContentBasePart.SectionWidgetId = SectionWidgetId;
+            sectionContentBasePart.SectionGroupId = SectionGroupId;
+            sectionContentBasePart.SectionContentType = SectionContentType;
+            sectionContentBasePart.Order = Order;
+            sectionContentBasePart.CreateBy = CreateBy;
+            sectionContentBasePart.CreatebyName = CreatebyName;
+            sectionContentBasePart.CreateDate = CreateDate;
+            sectionContentBasePart.LastUpdateBy = LastUpdateBy;
+            sectionContentBasePart.LastUpdateByName = LastUpdateByName;
+            sectionContentBasePart.LastUpdateDate = LastUpdateDate;
+            sectionContentBasePart.Title = Title;
+            sectionContentBasePart.Status = Status;
+            sectionContentBasePart.Description = Description;
+            return sectionContentBasePart;
+        }
     }
 
     public class SectionContentBasic : SectionContent
@@ -98,8 +118,8 @@ namespace ZKEACMS.SectionWidget.Models
         [NotMapped]
         public override string SectionGroupId { get; set; }
     }
-    [Table("SectionContent")]
-    public class SectionContentBasePart: SectionContent
+    [DataTable("SectionContent")]
+    public class SectionContentBasePart : SectionContent
     {
 
     }

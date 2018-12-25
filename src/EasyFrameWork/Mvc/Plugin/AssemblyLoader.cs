@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.DependencyModel;
+/* http://www.zkea.net/ 
+ * Copyright 2018 ZKEASOFT 
+ * http://www.zkea.net/licenses */
+using Microsoft.Extensions.DependencyModel;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,26 +17,27 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace Easy.Mvc.Plugin
 {
-    public class AssemblyLoader : AssemblyLoadContext
+    public class AssemblyLoader
     {
-        private const string ControllerTypeNameSuffix = "Controller";
-        private Assembly CurrentAssembly;
-        private List<Assembly> DependencyAssemblies = new List<Assembly>();
-        public Action<IPluginStartup> OnLoading { get; set; }
-        public Action<Assembly> OnLoaded { get; set; }
-        public Func<IServiceCollection> Services { get; set; }
-        public IHostingEnvironment HostingEnvironment { get; set; }
+        private static bool Resolving { get; set; }
+        public AssemblyLoader()
+        {
+            DependencyAssemblies = new List<Assembly>();
+        }
+        public string CurrentPath { get; set; }
+        public string AssemblyPath { get; set; }
+        public Assembly CurrentAssembly { get; private set; }
+        public List<Assembly> DependencyAssemblies { get; private set; }
+        private TypeInfo PluginTypeInfo = typeof(IPluginStartup).GetTypeInfo();
         public IEnumerable<Assembly> LoadPlugin(string path)
         {
             if (CurrentAssembly == null)
             {
-                AssemblyLoadContext.Default.Resolving += Default_Resolving;
-                var assembly = this.LoadFromAssemblyPath(path);
-                CurrentAssembly = assembly;
-                RegistAssembly(assembly);
-                ResolveDenpendency();
-                OnLoaded?.Invoke(assembly);
-                yield return assembly;
+                AssemblyPath = path;
+                //AssemblyLoadContext.Default.Resolving += AssemblyResolving;
+                CurrentAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
+                ResolveDenpendency(CurrentAssembly);
+                yield return CurrentAssembly;
                 foreach (var item in DependencyAssemblies)
                 {
                     yield return item;
@@ -42,133 +46,62 @@ namespace Easy.Mvc.Plugin
             else { throw new Exception("A loader just can load one assembly."); }
         }
 
-        private Assembly Default_Resolving(AssemblyLoadContext arg1, AssemblyName arg2)
+        //private Assembly AssemblyResolving(AssemblyLoadContext arg1, AssemblyName arg2)
+        //{
+        //    if (arg2.FullName == CurrentAssembly.FullName)
+        //    {
+        //        return CurrentAssembly;
+        //    }
+        //    var deps = DependencyContext.Default;
+        //    if (deps.CompileLibraries.Any(d => d.Name == arg2.Name))
+        //    {
+        //        return Assembly.Load(arg2);
+        //    }
+
+        //    foreach (var item in DependencyAssemblies)
+        //    {
+        //        if (item.FullName == arg2.FullName)
+        //        {
+        //            return item;
+        //        }
+        //    }
+        //    return null;
+        //}
+        private void ResolveDenpendency(Assembly assembly)
         {
-            return Load(arg2);
-        }
-        private void ResolveDenpendency()
-        {
-            string currentName = CurrentAssembly.GetName().Name;
-            var dependencyCompilationLibrary = DependencyContext.Load(CurrentAssembly)
+            string currentName = assembly.GetName().Name;
+            List<CompilationLibrary> dependencyCompilationLibrary = DependencyContext.Load(assembly)
                 .CompileLibraries.Where(de => de.Name != currentName && !DependencyContext.Default.CompileLibraries.Any(m => m.Name == de.Name))
                 .ToList();
 
             dependencyCompilationLibrary.Each(libaray =>
             {
-                bool depLoaded = false;
-                var files = new DirectoryInfo(Path.GetDirectoryName(CurrentAssembly.Location)).GetFiles($"{libaray.Name}.dll");
-                foreach (var file in files)
+                foreach (var item in libaray.ResolveReferencePaths(new DependencyAssemblyResolver(Path.GetDirectoryName(assembly.Location))))
                 {
-                    Console.WriteLine(file.FullName);
-                    DependencyAssemblies.Add(LoadFromAssemblyPath(file.FullName));
-                    depLoaded = true;
-                    break;
-                }
-                if (!depLoaded)
-                {
-                    foreach (var item in libaray.ResolveReferencePaths())
-                    {
-                        if (File.Exists(item))
-                        {
-                            DependencyAssemblies.Add(LoadFromAssemblyPath(item));
-                            break;
-                        }
-                    }
+                    DependencyAssemblies.Add(AssemblyLoadContext.Default.LoadFromAssemblyPath(item));
                 }
             });
-        }
-        protected override Assembly Load(AssemblyName assemblyName)
-        {
-            if (assemblyName.FullName == CurrentAssembly.FullName)
-            {
-                return CurrentAssembly;
-            }
-            var deps = DependencyContext.Default;
-            if (deps.CompileLibraries.Any(d => d.Name == assemblyName.Name))
-            {
-                return Assembly.Load(assemblyName);
-            }
 
-            foreach (var item in DependencyAssemblies)
-            {
-                if (item.FullName == assemblyName.FullName)
-                {
-                    return item;
-                }
-            }
-            return null;
-        }
-        private void RegistAssembly(Assembly assembly)
-        {
-            List<TypeInfo> controllers = new List<TypeInfo>();
-            Type PluginType = typeof(IPluginStartup);
+            PluginDescriptor plugin = null;
             foreach (var typeInfo in assembly.DefinedTypes)
             {
                 if (typeInfo.IsAbstract || typeInfo.IsInterface) continue;
 
-                if (IsController(typeInfo) && !controllers.Contains(typeInfo))
+                if (PluginTypeInfo.IsAssignableFrom(typeInfo))
                 {
-                    controllers.Add(typeInfo);
-                }
-                else if (PluginType.IsAssignableFrom(typeInfo.AsType()))
-                {
-                    var plugin = (Activator.CreateInstance(typeInfo.AsType()) as IPluginStartup);
-                    plugin.CurrentPluginPath = Path.GetDirectoryName(assembly.Location);
-                    var binIndex = plugin.CurrentPluginPath.IndexOf("\\bin\\");
-                    if (binIndex >= 0)
-                    {
-                        plugin.CurrentPluginPath = plugin.CurrentPluginPath.Substring(0, binIndex);
-                    }
-                    if (Services != null)
-                    {
-                        plugin.HostingEnvironment = HostingEnvironment;
-                        plugin.ConfigureServices(Services());
-                    }
-                    OnLoading?.Invoke(plugin);
+                    plugin = new PluginDescriptor();
+                    plugin.PluginType = typeInfo.AsType();
+                    plugin.Assembly = assembly;
+                    plugin.Dependency = dependencyCompilationLibrary;
+                    plugin.CurrentPluginPath = CurrentPath;
                 }
             }
-            if (controllers.Count > 0 && !ActionDescriptorProvider.PluginControllers.ContainsKey(assembly.FullName) && Services != null)
+
+            if (plugin != null)
             {
-                IServiceCollection services = Services();
-                controllers.Each(c => services.TryAddTransient(c.AsType()));
-                ActionDescriptorProvider.PluginControllers.Add(assembly.FullName, controllers);
-            }
-        }
-        protected bool IsController(TypeInfo typeInfo)
-        {
-            if (!typeInfo.IsClass)
-            {
-                return false;
+                PluginActivtor.LoadedPlugins.Add(plugin);
             }
 
-            if (typeInfo.IsAbstract)
-            {
-                return false;
-            }
-
-
-            if (!typeInfo.IsPublic)
-            {
-                return false;
-            }
-
-            if (typeInfo.ContainsGenericParameters)
-            {
-                return false;
-            }
-
-            if (typeInfo.IsDefined(typeof(NonControllerAttribute)))
-            {
-                return false;
-            }
-
-            if (!typeInfo.Name.EndsWith(ControllerTypeNameSuffix, StringComparison.OrdinalIgnoreCase) &&
-                !typeInfo.IsDefined(typeof(ControllerAttribute)))
-            {
-                return false;
-            }
-
-            return true;
         }
     }
 }

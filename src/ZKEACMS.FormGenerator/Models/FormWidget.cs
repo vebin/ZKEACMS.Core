@@ -1,4 +1,4 @@
-﻿using Easy.MetaData;
+using Easy.MetaData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +10,6 @@ using Easy.Extend;
 
 namespace ZKEACMS.FormGenerator.Models
 {
-    [ViewConfigure(typeof(FormWidgetMetaData))]
     public class FormWidget : SimpleWidgetBase
     {
         public string FormID { get; set; }

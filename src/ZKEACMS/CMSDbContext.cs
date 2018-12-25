@@ -1,4 +1,4 @@
-﻿/* http://www.zkea.net/ 
+/* http://www.zkea.net/ 
  * Copyright 2017 ZKEASOFT 
  * http://www.zkea.net/licenses */
 
@@ -21,8 +21,9 @@ namespace ZKEACMS
 {
     public class CMSDbContext : EasyDbContext
     {
-        public CMSDbContext(IEnumerable<IOnModelCreating> modelCreatings, IOnDatabaseConfiguring configuring) : base(modelCreatings, configuring)
+        public CMSDbContext(DbContextOptions<CMSDbContext> dbContextOptions, IEnumerable<IOnModelCreating> modelCreatings) : base(dbContextOptions)
         {
+            ModelCreatings = modelCreatings;
         }
 
         internal DbSet<WidgetBasePart> WidgetBasePart { get; set; }
@@ -35,7 +36,6 @@ namespace ZKEACMS
         internal DbSet<MediaEntity> Media { get; set; }
         internal DbSet<PageEntity> Page { get; set; }
         internal DbSet<ThemeEntity> Theme { get; set; }
-        internal DbSet<WidgetTemplateEntity> WidgetTemplate { get; set; }
         internal DbSet<ZoneEntity> Zone { get; set; }
         internal DbSet<DataArchived.DataArchived> DataArchived { get; set; }
         internal DbSet<ExtendFieldEntity> ExtendField { get; set; }
@@ -46,5 +46,6 @@ namespace ZKEACMS
         internal DbSet<ScriptWidget> ScriptWidget { get; set; }
         internal DbSet<StyleSheetWidget> StyleSheetWidget { get; set; }
         internal DbSet<VideoWidget> VideoWidget { get; set; }
+        internal DbSet<BreadcrumbWidget> BreadcrumbWidget { get; set; }
     }
 }

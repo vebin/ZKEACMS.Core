@@ -8,10 +8,11 @@ using Easy.Modules.Role;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Principal;
+using Easy.RepositoryPattern;
 
 namespace Easy.Modules.User.Models
 {
-    [ViewConfigure(typeof(UserMetaData)),Table("Users")]
+    [DataTable("Users")]
     public class UserEntity : HumanBase, IUser, IIdentity
     {
         [Key]
@@ -40,7 +41,8 @@ namespace Easy.Modules.User.Models
         public string UserName { get; set; }
 
         public string ApiLoginToken { get; set; }
-        
+
+        [NotMapped]        
         public virtual List<UserRoleRelation> Roles { get; set; }
         [NotMapped]
         public override string Title

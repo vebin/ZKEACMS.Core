@@ -15,6 +15,7 @@ using ZKEACMS.Page;
 using ZKEACMS.Widget;
 using ZKEACMS.Zone;
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace ZKEACMS.Controllers
 {
@@ -35,13 +36,13 @@ namespace ZKEACMS.Controllers
 
         public override IActionResult Index()
         {
-            return View(Service.Get());
+            return View(Service.GetWithFull());
         }
 
         public IActionResult LayoutWidget(string LayoutID)
         {
             ViewBag.LayoutID = LayoutID;
-            return View(Service.Get());
+            return View(Service.Get().ToList());
         }
         [HttpPost]
         public IActionResult LayoutZones(string ID)
@@ -51,7 +52,7 @@ namespace ZKEACMS.Controllers
             {
                 Layout = layout,
                 LayoutID = ID,
-                Zones = _zoneService.GetZonesByLayoutId(ID),
+                Zones = _zoneService.GetByLayoutId(ID),
                 Widgets = _widgetService.GetByLayoutId(ID),
                 LayoutHtml = layout.Html
             };
@@ -71,6 +72,7 @@ namespace ZKEACMS.Controllers
 
         public override IActionResult Edit(string ID)
         {
+            ViewBag.CanDelete = _pageService.Count(m => m.LayoutId == ID) == 0;
             return base.Edit(ID);
         }
 
@@ -83,33 +85,31 @@ namespace ZKEACMS.Controllers
             }
             return base.Edit(entity);
         }
+        [ResponseCache(NoStore = true)]
         public IActionResult Design(string ID, string PageID)
         {
-            // Stop Caching in IE
-
-
-            // Stop Caching in Firefox
-
             LayoutEntity layout = null;
-            if (ID.IsNotNullAndWhiteSpace())
-            {
-                layout = Service.Get(ID);
-            }
             if (PageID.IsNotNullAndWhiteSpace())
             {
-                layout.Page = new PageEntity { ID = PageID };
+                var page = _pageService.Get(PageID);
+                layout = Service.GetByPage(page);
+                layout.Page = page;
+            }
+            else if (ID.IsNotNullAndWhiteSpace())
+            {
+                layout = Service.Get(ID);
             }
             return View(layout ?? new LayoutEntity());
         }
         [DefaultAuthorize(Policy = PermissionKeys.ManageLayout)]
-        public IActionResult SaveLayout(string[] html, LayoutEntity layout, ZoneCollection zones)
+        public IActionResult SaveLayout(string[] html, LayoutEntity layoutEntity, ZoneCollection zones)
         {
-            layout.Html = Zone.Helper.GenerateHtml(html, zones);
-            layout.Zones = zones;
-            Service.UpdateDesign(layout);
-            if (layout.Page != null)
+            layoutEntity.Html = Zone.Helper.GenerateHtml(html, zones);
+            layoutEntity.Zones = zones;
+            Service.UpdateDesign(layoutEntity);
+            if (layoutEntity.Page != null)
             {
-                return RedirectToAction("Design", "Page", new { layout.Page.ID });
+                return RedirectToAction("Design", "Page", new { layoutEntity.Page.ID });
             }
             return RedirectToAction("Index");
         }
